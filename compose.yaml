@@ -75,9 +75,13 @@ services:
       - 9696:9696
 
   byparr:   # FlareSolverr-compatible Cloudflare solver for Prowlarr (http://byparr:8191)
+    # Opt-in: runs a headless Chrome that needs ~1 GB of RAM while solving.
+    # Enable with:  docker compose --profile cloudflare up -d byparr
     <<: *base
+    profiles: [cloudflare]
     image: ghcr.io/thephaseless/byparr:3.1.1
     container_name: byparr
+    mem_limit: 1500m
     shm_size: 1gb
     environment:
       TZ: ${TZ}
