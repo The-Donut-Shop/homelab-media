@@ -1,0 +1,96 @@
+# Public apps link to https://<name>.DOMAIN (published by homelab-edge);
+# admin apps link to LAN_HOST (reachable on the LAN / Tailscale only).
+# All keys come from HOMEPAGE_VAR_* environment variables (see compose.yaml).
+
+- Request:
+    - Movies & Series:
+        icon: seerr.png
+        href: https://requests.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Search & request a movie or a show
+        widget:
+          type: seerr
+          url: http://seerr:5055
+          key: "{{HOMEPAGE_VAR_SEERR_KEY}}"
+    - Music:
+        icon: mdi-music-circle
+        href: https://music-requests.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Get a whole artist, an album or a single song
+    - Books:
+        icon: mdi-book-search
+        href: https://book-requests.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Search & request ebooks and audiobooks
+
+- Enjoy:
+    - Watch:
+        icon: jellyfin.png
+        href: https://media.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Jellyfin - movies & series
+        widget:
+          type: jellyfin
+          url: http://jellyfin:8096
+          key: "{{HOMEPAGE_VAR_JELLYFIN_KEY}}"
+          enableBlocks: true
+          enableNowPlaying: true
+    - Listen:
+        icon: navidrome.png
+        href: https://music.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Navidrome - music (any Subsonic app works too)
+    - Read:
+        icon: calibre-web.png
+        href: https://books.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Calibre-Web - ebooks, OPDS, Kobo & KOReader sync
+    - Audiobooks:
+        icon: audiobookshelf.png
+        href: http://{{HOMEPAGE_VAR_LAN_HOST}}:13378
+        description: Audiobookshelf
+
+- Downloads:
+    - Torrents:
+        icon: qbittorrent.png
+        href: http://{{HOMEPAGE_VAR_LAN_HOST}}:8080
+        widget:
+          type: qbittorrent
+          url: http://qbittorrent:8080
+          username: "{{HOMEPAGE_VAR_QBIT_USERNAME}}"
+          password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
+    - Soulseek:
+        icon: slskd.png
+        href: http://{{HOMEPAGE_VAR_LAN_HOST}}:5030
+
+- Behind the scenes:
+    - Radarr:
+        icon: radarr.png
+        href: http://{{HOMEPAGE_VAR_LAN_HOST}}:7878
+        widget:
+          type: radarr
+          url: http://radarr:7878
+          key: "{{HOMEPAGE_VAR_RADARR_KEY}}"
+    - Sonarr:
+        icon: sonarr.png
+        href: http://{{HOMEPAGE_VAR_LAN_HOST}}:8989
+        widget:
+          type: sonarr
+          url: http://sonarr:8989
+          key: "{{HOMEPAGE_VAR_SONARR_KEY}}"
+    - Bazarr:
+        icon: bazarr.png
+        href: http://{{HOMEPAGE_VAR_LAN_HOST}}:6767
+        widget:
+          type: bazarr
+          url: http://bazarr:6767
+          key: "{{HOMEPAGE_VAR_BAZARR_KEY}}"
+    - Prowlarr:
+        icon: prowlarr.png
+        href: http://{{HOMEPAGE_VAR_LAN_HOST}}:9696
+        widget:
+          type: prowlarr
+          url: http://prowlarr:9696
+          key: "{{HOMEPAGE_VAR_PROWLARR_KEY}}"
+    - Cleanuparr:
+        icon: mdi-broom
+        href: http://{{HOMEPAGE_VAR_LAN_HOST}}:11011
+        description: Clears stuck downloads
+    - Maloja:
+        icon: mdi-chart-bar
+        href: http://{{HOMEPAGE_VAR_LAN_HOST}}:42010
+        description: Listening history

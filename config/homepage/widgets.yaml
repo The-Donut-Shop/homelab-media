@@ -1,0 +1,20 @@
+# The search box searches movies & series in Seerr. Music and books have their
+# own search pages (Aurral / Shelfmark tiles) because Homepage supports one
+# custom search provider.
+- search:
+    provider: custom
+    url: https://requests.{{HOMEPAGE_VAR_DOMAIN}}/search?query=
+    target: _blank
+    focus: true
+
+- resources:
+    cpu: true
+    memory: true
+    disk: /mnt/storage
+    label: storage
+
+- datetime:
+    text_size: md
+    format:
+      dateStyle: medium
+      timeStyle: short

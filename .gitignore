@@ -1,0 +1,12 @@
+# secrets and machine-specific values: only .env.example is committed
+.env
+*.local
+*.local.*
+
+# app state never lives in this repo (it is in ${APPDATA}), but be safe
+appdata/
+config/homepage/logs/
+*.db
+*.db-*
+*.sqlite*
+*.log

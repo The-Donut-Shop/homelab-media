@@ -1,0 +1,27 @@
+title: Media
+description: Request it, it downloads, it shows up sorted.
+theme: dark
+color: slate
+headerStyle: clean
+statusStyle: dot
+hideVersion: true
+target: _blank
+language: en
+
+layout:
+  Request:
+    style: row
+    columns: 3
+    icon: mdi-magnify
+  Enjoy:
+    style: row
+    columns: 4
+    icon: mdi-play-circle
+  Downloads:
+    style: row
+    columns: 2
+    icon: mdi-download
+  Behind the scenes:
+    style: row
+    columns: 3
+    icon: mdi-cog

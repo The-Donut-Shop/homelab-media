@@ -1,0 +1,327 @@
+# homelab-media: request → download → organise → serve
+#
+#   Requests          Seerr (movies/series) · Aurral (music) · Shelfmark (books)
+#   Indexers          Prowlarr (+ Byparr for Cloudflare-protected sites)
+#   Download clients  qBittorrent (torrents) · slskd (Soulseek)
+#   Organisers        Radarr · Sonarr · Aurral · Calibre-Web-Automated
+#   Extras            Bazarr (subtitles) · lyrics (synced .lrc via beets-getlrc)
+#                     Cleanuparr (stuck downloads)
+#   Players/servers   Jellyfin (movies/series) · Navidrome (music)
+#                     Calibre-Web-Automated (ebooks, OPDS/Kobo/KOReader) · Audiobookshelf
+#   Front door        Homepage dashboard
+#
+# Every container that touches media mounts the SAME host folder (${DATA}) at
+# /data, so imports are instant moves/hardlinks instead of copies.
+# Folder layout: see README.md. Settings and secrets live in .env (see .env.example).
+
+name: media
+
+x-base: &base
+  restart: unless-stopped
+  networks: [media]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+x-lsio-env: &lsio-env
+  PUID: ${PUID}
+  PGID: ${PGID}
+  TZ: ${TZ}
+  UMASK: "002"
+
+services:
+  # ───────────────────────────── download clients ─────────────────────────────
+  qbittorrent:
+    <<: *base
+    image: lscr.io/linuxserver/qbittorrent:5.3.1
+    container_name: qbittorrent
+    environment:
+      <<: *lsio-env
+      WEBUI_PORT: 8080
+      TORRENTING_PORT: 6881
+    volumes:
+      - ${APPDATA}/qbittorrent:/config
+      - ${DATA}:/data
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+
+  slskd:
+    <<: *base
+    image: slskd/slskd:0.26.2
+    container_name: slskd
+    user: "${PUID}:${PGID}"
+    environment:
+      SLSKD_REMOTE_CONFIGURATION: "false"
+      SLSKD_UMASK: "002"
+      TZ: ${TZ}
+    volumes:
+      - ${APPDATA}/slskd:/app            # slskd.yml (Soulseek login, API key) lives here
+      - ${DATA}:/data
+    ports:
+      - 5030:5030     # web UI / API
+      - 50300:50300   # Soulseek peer port
+
+  # ──────────────────────────────── indexers ──────────────────────────────────
+  prowlarr:
+    <<: *base
+    image: lscr.io/linuxserver/prowlarr:3.1.0
+    container_name: prowlarr
+    environment: *lsio-env
+    volumes:
+      - ${APPDATA}/prowlarr:/config
+    ports:
+      - 9696:9696
+
+  byparr:   # FlareSolverr-compatible Cloudflare solver for Prowlarr (http://byparr:8191)
+    <<: *base
+    image: ghcr.io/thephaseless/byparr:3.1.1
+    container_name: byparr
+    shm_size: 1gb
+    environment:
+      TZ: ${TZ}
+      LOG_LEVEL: info
+
+  # ──────────────────────────────── movies & series ───────────────────────────
+  radarr:
+    <<: *base
+    image: lscr.io/linuxserver/radarr:7.0.3
+    container_name: radarr
+    environment: *lsio-env
+    volumes:
+      - ${APPDATA}/radarr:/config
+      - ${DATA}:/data
+    ports:
+      - 7878:7878
+
+  sonarr:
+    <<: *base
+    image: lscr.io/linuxserver/sonarr:4.0.20
+    container_name: sonarr
+    environment: *lsio-env
+    volumes:
+      - ${APPDATA}/sonarr:/config
+      - ${DATA}:/data
+    ports:
+      - 8989:8989
+
+  bazarr:   # subtitles (English + Hindi) saved next to every video
+    <<: *base
+    image: lscr.io/linuxserver/bazarr:1.6.2
+    container_name: bazarr
+    environment: *lsio-env
+    volumes:
+      - ${APPDATA}/bazarr:/config
+      - ${DATA}:/data
+    ports:
+      - 6767:6767
+
+  # Recyclarr / TRaSH profiles are intentionally NOT used: they score public-tracker
+  # groups such as YTS/YIFY at -10000, which would block most releases on the public
+  # indexers this stack uses. Radarr/Sonarr built-in "HD-1080p" profiles are used instead.
+
+  cleanuparr:   # removes stalled/failed downloads so the *arrs can grab another release
+    <<: *base
+    image: ghcr.io/cleanuparr/cleanuparr:2.11.2
+    container_name: cleanuparr
+    environment:
+      <<: *lsio-env
+      PORT: 11011
+    volumes:
+      - ${APPDATA}/cleanuparr:/config
+      - ${DATA}:/data
+    ports:
+      - 11011:11011
+
+  seerr:   # requests for movies & series (successor of Jellyseerr/Overseerr)
+    <<: *base
+    image: ghcr.io/seerr-team/seerr:v3.5.2
+    container_name: seerr
+    init: true
+    environment:
+      TZ: ${TZ}
+      PORT: 5055
+      LOG_LEVEL: info
+    volumes:
+      - ${APPDATA}/seerr:/app/config
+    ports:
+      - 5055:5055
+
+  jellyfin:
+    <<: *base
+    image: lscr.io/linuxserver/jellyfin:10.11.11
+    container_name: jellyfin
+    environment:
+      <<: *lsio-env
+      JELLYFIN_PublishedServerUrl: ${JELLYFIN_PUBLIC_URL}
+    devices:
+      - /dev/dri:/dev/dri          # Intel Quick Sync hardware transcoding
+    volumes:
+      - ${APPDATA}/jellyfin:/config
+      - ${DATA}/media:/data/media:ro   # read-only: Jellyfin can never delete media
+    ports:
+      - 8096:8096
+      - 7359:7359/udp              # client auto-discovery on the LAN
+
+  # ─────────────────────────────────── music ──────────────────────────────────
+  aurral:   # request a whole artist, an album or a single song
+    <<: *base
+    image: ghcr.io/lklynet/aurral:3.1.0
+    container_name: aurral
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      LIBRARY_FOLDER: /data/media/music
+    volumes:
+      - ${APPDATA}/aurral:/config
+      - ${DATA}:/data
+    ports:
+      - 3001:3001
+
+  lyrics:   # writes synced .lrc lyrics (LRCLIB) next to every track, every 30 min
+    <<: *base
+    build: ./lyrics
+    image: homelab/lyrics:beets-2.14.1-getlrc-0.1.16
+    container_name: lyrics
+    user: "${PUID}:${PGID}"
+    environment:
+      TZ: ${TZ}
+      INTERVAL_SECONDS: 1800
+    volumes:
+      - ${APPDATA}/lyrics:/config
+      - ./config/lyrics/config.yaml:/config/config.yaml:ro
+      - ${DATA}/media/music:/music
+
+  navidrome:
+    <<: *base
+    image: navidrome/navidrome:0.64.2
+    container_name: navidrome
+    user: "${PUID}:${PGID}"
+    environment:
+      ND_MUSICFOLDER: /music
+      ND_DATAFOLDER: /data
+      ND_SCANNER_SCHEDULE: "@every 6h"
+      ND_SCANNER_WATCHERWAIT: 30s
+      ND_SCANNER_PURGEMISSING: full
+      ND_SESSIONTIMEOUT: 24h
+      ND_LOGLEVEL: info
+      ND_BASEURL: ${NAVIDROME_PUBLIC_URL}
+      ND_LASTFM_APIKEY: ${LASTFM_API_KEY}
+      ND_LASTFM_SECRET: ${LASTFM_SECRET}
+    volumes:
+      - ${APPDATA}/navidrome:/data
+      - ${DATA}/media/music:/music:ro
+    ports:
+      - 4533:4533
+
+  maloja:   # listening history / scrobbles
+    <<: *base
+    image: krateng/maloja:3.2.4
+    container_name: maloja
+    environment:
+      MALOJA_FORCE_PASSWORD: ${MALOJA_PASSWORD}
+    volumes:
+      - ${APPDATA}/maloja:/mljdata
+    ports:
+      - 42010:42010
+
+  # ─────────────────────────────────── books ──────────────────────────────────
+  shelfmark:   # search & request ebooks/audiobooks (Prowlarr, Anna's Archive, Soulseek)
+    <<: *base
+    image: ghcr.io/calibrain/shelfmark-lite:1.7.0
+    container_name: shelfmark
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      SEARCH_MODE: universal
+      PROWLARR_ENABLED: "true"
+      PROWLARR_URL: http://prowlarr:9696
+      PROWLARR_API_KEY: ${PROWLARR_API_KEY}
+      PROWLARR_TORRENT_CLIENT: qbittorrent
+      QBITTORRENT_URL: http://qbittorrent:8080
+      QBITTORRENT_USERNAME: ${QBIT_USERNAME}
+      QBITTORRENT_PASSWORD: ${QBIT_PASSWORD}
+      QBITTORRENT_CATEGORY: books
+      QBITTORRENT_CATEGORY_AUDIOBOOK: audiobooks
+      SLSKD_ENABLED: "true"
+      SLSKD_URL: http://slskd:5030
+      SLSKD_API_KEY: ${SLSKD_API_KEY}
+      INGEST_DIR: /cwa-book-ingest          # Calibre-Web-Automated imports from here
+      DESTINATION_AUDIOBOOK: /data/media/audiobooks
+      FILE_ORGANIZATION: rename
+      FILE_ORGANIZATION_AUDIOBOOK: organize
+      HARDLINK_TORRENTS: "false"            # ingest deletes files after import, so copy
+      HARDLINK_TORRENTS_AUDIOBOOK: "true"
+      AUTH_METHOD: cwa                      # log in with your Calibre-Web-Automated account
+      CWA_DB_PATH: /auth/app.db
+      CALIBRE_WEB_URL: ${BOOKS_PUBLIC_URL}
+    volumes:
+      - ${APPDATA}/shelfmark:/config
+      - ${DATA}:/data
+      - ${DATA}/downloads/cwa-ingest:/cwa-book-ingest
+      - ${APPDATA}/calibre-web-automated/app.db:/auth/app.db:ro
+    ports:
+      - 8184:8084
+    depends_on: [calibre-web-automated]
+
+  calibre-web-automated:   # ebook library: web reader, OPDS, Kobo sync, KOReader sync, send-to-Kindle
+    <<: *base
+    image: crocodilestick/calibre-web-automated:v4.0.8
+    container_name: calibre-web-automated
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      TRUSTED_PROXY_COUNT: "1"
+    volumes:
+      - ${APPDATA}/calibre-web-automated:/config
+      - ${DATA}/downloads/cwa-ingest:/cwa-book-ingest
+      - ${DATA}/media/books:/calibre-library
+    ports:
+      - 8183:8083
+
+  audiobookshelf:
+    <<: *base
+    image: ghcr.io/advplyr/audiobookshelf:2.38.0
+    container_name: audiobookshelf
+    user: "${PUID}:${PGID}"
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ${APPDATA}/audiobookshelf/config:/config
+      - ${APPDATA}/audiobookshelf/metadata:/metadata
+      - ${DATA}/media/audiobooks:/audiobooks
+      - ${DATA}/media/podcasts:/podcasts
+    ports:
+      - 13378:80
+
+  # ───────────────────────────────── front door ───────────────────────────────
+  homepage:
+    <<: *base
+    image: ghcr.io/gethomepage/homepage:v2.8.0
+    container_name: homepage
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: ${HOMEPAGE_ALLOWED_HOSTS}
+      LOG_TARGETS: stdout
+      HOMEPAGE_VAR_DOMAIN: ${DOMAIN}
+      HOMEPAGE_VAR_LAN_HOST: ${LAN_HOST}
+      HOMEPAGE_VAR_RADARR_KEY: ${RADARR_API_KEY}
+      HOMEPAGE_VAR_SONARR_KEY: ${SONARR_API_KEY}
+      HOMEPAGE_VAR_PROWLARR_KEY: ${PROWLARR_API_KEY}
+      HOMEPAGE_VAR_BAZARR_KEY: ${BAZARR_API_KEY}
+      HOMEPAGE_VAR_SEERR_KEY: ${SEERR_API_KEY}
+      HOMEPAGE_VAR_JELLYFIN_KEY: ${JELLYFIN_API_KEY}
+      HOMEPAGE_VAR_QBIT_USERNAME: ${QBIT_USERNAME}
+      HOMEPAGE_VAR_QBIT_PASSWORD: ${QBIT_PASSWORD}
+    volumes:
+      - ./config/homepage:/app/config
+      - ${DATA}:/mnt/storage:ro      # only for the free-space widget
+    ports:
+      - 3005:3000
+
+networks:
+  media:
+    name: media

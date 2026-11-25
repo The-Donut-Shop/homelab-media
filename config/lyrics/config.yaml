@@ -1,0 +1,23 @@
+# beets config for the lyrics container. beets is used ONLY as an index so that
+# beets-getlrc knows which tracks exist; it must never touch the audio files.
+directory: /music
+library: /config/library.db
+
+import:
+  copy: no
+  move: no
+  link: no
+  hardlink: no
+  write: no
+  autotag: no
+  incremental: yes
+  quiet: yes
+  resume: no
+  log: /config/import.log
+
+plugins: getlrc
+
+getlrc:
+  overwrite: no              # never replace an existing .lrc
+  delay: 0.5                 # be polite to lrclib.net
+  fallback_to_plain_lrc: yes # if no synced lyrics exist, write plain lyrics as .lrc
