@@ -8,11 +8,14 @@
 # knows) and run beets-getlrc. getlrc skips tracks that already have a .lrc
 # and caches "not found", so LRCLIB isn't hammered.
 # Once a day (FULL_SECONDS) it does a full pass to pick up lyrics LRCLIB added
-# later and to drop deleted tracks from the index.
+# later and to drop deleted tracks from the index. The time of the last full
+# pass is kept on disk, so a restart (or a whole-host reboot, when every app is
+# starting at once) doesn't trigger an extra one.
 set -u
 CHECK="${CHECK_SECONDS:-120}"
 FULL="${FULL_SECONDS:-86400}"
 STAMP=/config/.last-run
+FULLSTAMP=/config/.last-full
 AUDIO='.*\.\(flac\|mp3\|m4a\|opus\|ogg\|oga\|wav\|aac\|alac\|aiff\|wv\|ape\)'
 
 log() { echo "[$(date -Iseconds)] $*"; }
@@ -25,14 +28,17 @@ full_pass() {
   python3 /usr/local/bin/normalize_feat.py || true
   beet getlrc -q || log "  getlrc returned an error"
   mv "$STAMP.next" "$STAMP"
+  touch "$FULLSTAMP"
 }
 
-last_full=0
+full_due() {
+  [ -f "$STAMP" ] && [ -f "$FULLSTAMP" ] || return 0
+  [ $(( $(date +%s) - $(stat -c %Y "$FULLSTAMP") )) -ge "$FULL" ]
+}
+
 while true; do
-  now=$(date +%s)
-  if [ ! -f "$STAMP" ] || [ $((now - last_full)) -ge "$FULL" ]; then
+  if full_due; then
     full_pass
-    last_full=$now
   else
     dirs=$(find /music -type f -iregex "$AUDIO" -newer "$STAMP" -printf '%h\n' 2>/dev/null | sort -u)
     if [ -n "$dirs" ]; then

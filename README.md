@@ -117,4 +117,4 @@ Everything runs at its core job; optional extras that quietly eat RAM, CPU or di
 | qBittorrent | 200 connections (60/torrent), 3 active downloads, LSD/RSS/embedded tracker off | Options |
 | slskd | search history kept 1 day, transfer records 1 day, stale partials 7 days | `retention:` in slskd.yml |
 | Bazarr | analytics | Settings → General |
-| lyrics | cheap check every 2 min, works only when new tracks land; full pass daily | `CHECK_SECONDS`, `FULL_SECONDS` |
+| lyrics | cheap check every 2 min, works only when new tracks land; full pass daily (remembered across restarts, so a reboot doesn't trigger an extra one) | `CHECK_SECONDS`, `FULL_SECONDS` |
