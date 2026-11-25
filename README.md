@@ -108,7 +108,7 @@ Everything runs at its core job; optional extras that quietly eat RAM, CPU or di
 | App | Off / reduced | Re-enable |
 |---|---|---|
 | all .NET apps (Radarr, Sonarr, Prowlarr, Jellyfin, slskd, Cleanuparr) | server GC → `DOTNET_gcServer=0`, `DOTNET_GCConserveMemory=7` | remove the env vars |
-| Byparr, Cleanuparr | not started by default (compose profiles `cloudflare`, `extras`) | `docker compose --profile cloudflare --profile extras up -d` |
+| Byparr, Cleanuparr | not started by default (compose profiles `cloudflare`, `extras`); Byparr runs on a second machine instead (`remote/byparr/`) | `docker compose --profile cloudflare --profile extras up -d` |
 | Jellyfin | trickplay thumbnails, chapter images, loudness/segment scans, periodic metadata refresh; scan concurrency 2 | library settings + Scheduled Tasks |
 | Radarr / Sonarr | folder rescan only after manual refresh; RSS sync 60 min | Media Management / Indexers |
 | Navidrome | artwork pre-cache, insights telemetry; full scan daily (watcher catches changes) | env vars |

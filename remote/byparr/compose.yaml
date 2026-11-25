@@ -1,0 +1,20 @@
+# Byparr on a second LAN machine (one with spare RAM). Prowlarr on the media host
+# uses it as its FlareSolverr proxy: Settings > Indexers > FlareSolverr,
+# host http://<this-machine-LAN-IP>:8191/, tag `flaresolverr` on Cloudflare-protected indexers.
+# Solves in ~5 s here vs ~5 min on the RAM-starved media host.
+name: byparr
+services:
+  byparr:
+    image: ghcr.io/thephaseless/byparr:3.1.1
+    container_name: byparr
+    restart: unless-stopped
+    shm_size: 1gb
+    mem_limit: 2g
+    environment:
+      TZ: Asia/Kolkata
+      LOG_LEVEL: info
+    ports:
+      - "8191:8191"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
