@@ -46,7 +46,7 @@ flowchart LR
 | Audiobooks & podcasts | Audiobookshelf (official iOS/Android apps) | 13378 |
 | Movie / series automation | Radarr / Sonarr | 7878 / 8989 |
 | Subtitles (English + Hindi, only when missing) | Bazarr | 6767 |
-| Synced lyrics (`.lrc` next to each track) | `lyrics` (beets + beets-getlrc) | – |
+| Synced lyrics (`.lrc` next to each track, ~2 min after it lands) | `lyrics` (beets + beets-getlrc) | – |
 | Indexers | Prowlarr + Byparr (Cloudflare solver) | 9696 |
 | Torrents / Soulseek | qBittorrent / slskd | 8080 / 5030 |
 | Clean up stuck downloads | Cleanuparr | 11011 |
@@ -117,4 +117,4 @@ Everything runs at its core job; optional extras that quietly eat RAM, CPU or di
 | qBittorrent | 200 connections (60/torrent), 3 active downloads, LSD/RSS/embedded tracker off | Options |
 | slskd | search history kept 1 day, transfer records 1 day, stale partials 7 days | `retention:` in slskd.yml |
 | Bazarr | analytics | Settings → General |
-| lyrics | runs every 6 h | `INTERVAL_SECONDS` |
+| lyrics | cheap check every 2 min, works only when new tracks land; full pass daily | `CHECK_SECONDS`, `FULL_SECONDS` |

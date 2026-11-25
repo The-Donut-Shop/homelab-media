@@ -1,18 +1,50 @@
 #!/bin/sh
-# Every INTERVAL_SECONDS:
-#   1. index new tracks in /music into the beets database (as-is: no autotag,
-#      no copy, no move, no tag writes)
-#   2. drop database entries for tracks that were deleted from disk
-#   3. fetch synced lyrics for every track that has no .lrc yet
+# Writes synced lyrics (.lrc) next to every track, shortly after it lands.
+#
+# Every CHECK_SECONDS (default 2 min) it looks for audio files newer than the
+# last run - a cheap metadata-only check. Only when new music has arrived does
+# it import those album folders into the beets index (as-is: no tagging,
+# copying, moving or writing; new tracks are merged into albums beets already
+# knows) and run beets-getlrc. getlrc skips tracks that already have a .lrc
+# and caches "not found", so LRCLIB isn't hammered.
+# Once a day (FULL_SECONDS) it does a full pass to pick up lyrics LRCLIB added
+# later and to drop deleted tracks from the index.
 set -u
-INTERVAL="${INTERVAL_SECONDS:-1800}"
+CHECK="${CHECK_SECONDS:-120}"
+FULL="${FULL_SECONDS:-86400}"
+STAMP=/config/.last-run
+AUDIO='.*\.\(flac\|mp3\|m4a\|opus\|ogg\|oga\|wav\|aac\|alac\|aiff\|wv\|ape\)'
 
-while true; do
-  echo "[$(date -Iseconds)] indexing /music"
-  beet import -q -i -A -C -W /music >/dev/null 2>&1 || echo "  import: nothing new or error (see /config/import.log)"
+log() { echo "[$(date -Iseconds)] $*"; }
+
+full_pass() {
+  log "full pass: indexing /music"
+  touch "$STAMP.next"
+  beet import -q -A -C -W -I /music >/dev/null 2>&1 || log "  import reported an error (see /config/import.log)"
   beet update >/dev/null 2>&1 || true
-  echo "[$(date -Iseconds)] fetching missing lyrics"
-  beet getlrc -q || echo "  getlrc returned an error"
-  echo "[$(date -Iseconds)] sleeping ${INTERVAL}s"
-  sleep "$INTERVAL"
+  python3 /usr/local/bin/normalize_feat.py || true
+  beet getlrc -q || log "  getlrc returned an error"
+  mv "$STAMP.next" "$STAMP"
+}
+
+last_full=0
+while true; do
+  now=$(date +%s)
+  if [ ! -f "$STAMP" ] || [ $((now - last_full)) -ge "$FULL" ]; then
+    full_pass
+    last_full=$now
+  else
+    dirs=$(find /music -type f -iregex "$AUDIO" -newer "$STAMP" -printf '%h\n' 2>/dev/null | sort -u)
+    if [ -n "$dirs" ]; then
+      touch "$STAMP.next"
+      echo "$dirs" | while IFS= read -r d; do
+        log "new tracks in: ${d#/music/}"
+        beet import -q -A -C -W -I "$d" >/dev/null 2>&1 || log "  import reported an error"
+      done
+      python3 /usr/local/bin/normalize_feat.py || true
+      beet getlrc -q || log "  getlrc returned an error"
+      mv "$STAMP.next" "$STAMP"
+    fi
+  fi
+  sleep "$CHECK"
 done

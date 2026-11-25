@@ -203,7 +203,7 @@ services:
     ports:
       - 3001:3001
 
-  lyrics:   # writes synced .lrc lyrics (LRCLIB) next to every track, every 6 hours
+  lyrics:   # writes synced .lrc lyrics (LRCLIB) next to new tracks within ~2 min of them landing
     <<: *base
     build: ./lyrics
     image: homelab/lyrics:beets-2.14.1-getlrc-0.1.16
@@ -211,7 +211,8 @@ services:
     user: "${PUID}:${PGID}"
     environment:
       TZ: ${TZ}
-      INTERVAL_SECONDS: 21600
+      CHECK_SECONDS: 120     # cheap check for new audio files
+      FULL_SECONDS: 86400    # full pass once a day
     volumes:
       - ${APPDATA}/lyrics:/config
       - ./config/lyrics/config.yaml:/config/config.yaml:ro
