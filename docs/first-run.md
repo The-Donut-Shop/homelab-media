@@ -28,8 +28,15 @@ mkdir -p "$DATA"/downloads/{torrents/{movies,series,music,books,audiobooks,incom
 **Prowlarr** (`:9696`): add indexers; Settings → Indexers → add a *FlareSolverr* proxy with host
 `http://byparr:8191` (local, profile `cloudflare`) or `http://<other-machine>:8191` (see `remote/byparr/`)
 and the tag `flaresolverr`; put that tag on Cloudflare-protected indexers (1337x, EZTV, Torrent Downloads).
-Indexers used here: Knaben, The Pirate Bay, LimeTorrents, TorrentDownload, YTS, Internet Archive,
-MixtapeTorrent, and via Byparr 1337x, EZTV, Torrent Downloads.
+Indexers used here: Knaben, The Pirate Bay, LimeTorrents, TorrentDownload, YTS,
+MixtapeTorrent, and via Byparr 1337x, EZTV, Torrent Downloads. Internet Archive is added but
+disabled: since 2026-11-25 archive.org stalls every request whose user agent says Prowlarr
+(the same query from curl answers in ~1 s), so it only timed out. Re-enable it to check.
+
+The host and the Byparr machine must not use the ISP's DNS resolver: it answers torrent sites
+with a CNAME to the ISP's block page, which shows up in Prowlarr as
+`Certificate validation for 1337x.to failed. RemoteCertificateNameMismatch`. See the
+`homelab` repo, `host/resolved.conf.d/`, and `dns:` in `remote/byparr/compose.yaml`.
 Settings → Apps: add Radarr (`http://radarr:7878`) and Sonarr (`http://sonarr:8989`) with
 Prowlarr server `http://prowlarr:9696`.
 

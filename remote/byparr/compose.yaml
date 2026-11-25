@@ -1,7 +1,9 @@
 # Byparr on a second LAN machine (one with spare RAM). Prowlarr on the media host
 # uses it as its FlareSolverr proxy: Settings > Indexers > FlareSolverr,
 # host http://<this-machine-LAN-IP>:8191/, tag `flaresolverr` on Cloudflare-protected indexers.
-# Solves in ~5 s here vs ~5 min on the RAM-starved media host.
+# A solve takes ~15-45 s here (longer when Cloudflare shows a checkbox); Prowlarr gives
+# up after the proxy's request timeout (120 s). On the RAM-starved media host it took minutes.
+# Don't poll GET /health in a loop: every call starts a whole browser.
 name: byparr
 services:
   byparr:
@@ -9,7 +11,17 @@ services:
     container_name: byparr
     restart: unless-stopped
     shm_size: 1gb
-    mem_limit: 2g
+    # 2g was too small: the browser kept hitting the cap (12k memory.max events in
+    # an hour) and a Cloudflare checkbox solve took 2-3 minutes instead of seconds.
+    mem_limit: 4g
+    # Public resolvers only: the router hands out the ISP resolver, which answers
+    # blocked torrent sites with a block page.
+    dns: [1.1.1.1, 1.0.0.1]
+    # Each browser gets a fresh profile under /tmp (~30-60 MB of cache writes),
+    # and they are not always cleaned up. Keep them in RAM: no SSD writes, and a
+    # restart starts clean.
+    tmpfs:
+      - /tmp:size=1g,mode=1777,exec
     environment:
       TZ: Asia/Kolkata
       LOG_LEVEL: info

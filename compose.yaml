@@ -92,6 +92,10 @@ services:
     container_name: byparr
     mem_limit: 1500m
     shm_size: 1gb
+    # Browser profiles in RAM: they are not always cleaned up, and on the slow
+    # OS disk their cache writes make every solve crawl.
+    tmpfs:
+      - /tmp:size=1g,mode=1777,exec
     environment:
       TZ: ${TZ}
       LOG_LEVEL: info
