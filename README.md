@@ -94,6 +94,10 @@ The first-run checklist is in [docs/first-run.md](docs/first-run.md).
 - **No Recyclarr / TRaSH profiles.** They score public-tracker groups (YTS/YIFY…)
   at −10000, which would block most releases on the public indexers used here.
   Radarr/Sonarr's built-in *HD-1080p* profiles are used instead.
+- **Small files first.** Radarr's preferred size is ~2 GB per film instead of the
+  default ~10 GB, and releases tagged as Spanish dubs are rejected
+  ([first-run](docs/first-run.md#4-movies--series)). To pick a specific copy, use
+  the movie's *Interactive Search* in Radarr.
 - **Jellyfin stays on 10.11.x for now.** Jellyfin 12 is out; that upgrade is a
   separate, deliberate step (database migration, client compatibility).
 - **Jellyfin and Navidrome mount media read-only**, so a player can never delete files.

@@ -51,6 +51,17 @@ Prowlarr server `http://prowlarr:9696`.
   - Radarr folder `{Movie Title} ({Release Year}) [tmdbid-{TmdbId}]`, file `{Movie Title} ({Release Year}) [{Quality Full}]`
   - Sonarr folder `{Series Title} ({Series Year}) [tvdbid-{TvdbId}]`, season `Season {season:00}`,
     file `{Series Title} - S{season:00}E{episode:00} - {Episode Title} [{Quality Full}]`
+- Radarr, small files first: Settings → Quality, *Preferred* size **15** MiB/min for the 720p qualities
+  and **20** MiB/min for the 1080p ones (Remux untouched); that is ~1.7 GB / ~2.2 GB for a 111-minute film.
+  Radarr still ranks by quality and seeders first; this only decides between copies of equal quality.
+  The default (95, i.e. ~10 GB) made it take the biggest copy.
+- Radarr, no Spanish dubs: Settings → Custom Formats → *Spanish dub*, one *Release Title* condition
+  `(?i)[\[\(](esp|spa|cast)[\]\)]|\b(castellano|espa[ñn]ol)\b`, scored **−10000** in every quality profile
+  (minimum score 0). Radarr reads `[Esp]` releases as English, so the profiles' language setting
+  (*Original*) doesn't catch them.
+
+To choose a release yourself: open the movie in Radarr → **Interactive Search**, sort by size and click the
+download icon. Rejected releases (red icon; hover for the reason) can still be grabbed from there.
 
 **Bazarr** (`:6767`): connect Sonarr and Radarr (API keys), language profile *English + Hindi*,
 default profile for new series/movies, providers (Gestdown, YIFY, Embedded; plus SubDL, SubSource
