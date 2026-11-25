@@ -100,3 +100,21 @@ The first-run checklist is in [docs/first-run.md](docs/first-run.md).
 - **Recycle bins** are enabled in Radarr/Sonarr (`/data/media/.recycle`), so an
   upgrade or delete is recoverable for 14 days.
 - **Shelfmark lite image.** The standard image bundles Chromium (~2 GB RAM).
+
+## Lean mode (8 GB host)
+
+Everything runs at its core job; optional extras that quietly eat RAM, CPU or disk are off.
+
+| App | Off / reduced | Re-enable |
+|---|---|---|
+| all .NET apps (Radarr, Sonarr, Prowlarr, Jellyfin, slskd, Cleanuparr) | server GC → `DOTNET_gcServer=0`, `DOTNET_GCConserveMemory=7` | remove the env vars |
+| Byparr, Cleanuparr | not started by default (compose profiles `cloudflare`, `extras`) | `docker compose --profile cloudflare --profile extras up -d` |
+| Jellyfin | trickplay thumbnails, chapter images, loudness/segment scans, periodic metadata refresh; scan concurrency 2 | library settings + Scheduled Tasks |
+| Radarr / Sonarr | folder rescan only after manual refresh; RSS sync 60 min | Media Management / Indexers |
+| Navidrome | artwork pre-cache, insights telemetry; full scan daily (watcher catches changes) | env vars |
+| Aurral | news, shows and discovery feeds (new releases kept); worker heap 384 MB, idle workers unloaded after 1 min | Settings → Inbox; env vars |
+| Calibre-Web-Automated | duplicate backup copies, zip backups, update polling, mobile blur | CWA Settings |
+| qBittorrent | 200 connections (60/torrent), 3 active downloads, LSD/RSS/embedded tracker off | Options |
+| slskd | search history kept 1 day, transfer records 1 day, stale partials 7 days | `retention:` in slskd.yml |
+| Bazarr | analytics | Settings → General |
+| lyrics | runs every 6 h | `INTERVAL_SECONDS` |

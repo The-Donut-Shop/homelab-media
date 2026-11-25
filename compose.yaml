@@ -29,6 +29,13 @@ x-lsio-env: &lsio-env
   TZ: ${TZ}
   UMASK: "002"
 
+# .NET apps (Radarr, Sonarr, Prowlarr, Jellyfin, slskd, Cleanuparr): workstation GC
+# + conserve-memory mode instead of per-core server GC heaps. Much smaller RSS on a
+# small box, no functional change.
+x-dotnet-env: &dotnet-env
+  DOTNET_gcServer: "0"
+  DOTNET_GCConserveMemory: "7"
+
 services:
   # ───────────────────────────── download clients ─────────────────────────────
   qbittorrent:
@@ -53,6 +60,7 @@ services:
     container_name: slskd
     user: "${PUID}:${PGID}"
     environment:
+      <<: *dotnet-env
       SLSKD_REMOTE_CONFIGURATION: "false"
       SLSKD_UMASK: "002"
       TZ: ${TZ}
@@ -68,7 +76,8 @@ services:
     <<: *base
     image: lscr.io/linuxserver/prowlarr:3.1.0
     container_name: prowlarr
-    environment: *lsio-env
+    environment:
+      <<: [*lsio-env, *dotnet-env]
     volumes:
       - ${APPDATA}/prowlarr:/config
     ports:
@@ -92,7 +101,8 @@ services:
     <<: *base
     image: lscr.io/linuxserver/radarr:7.0.3
     container_name: radarr
-    environment: *lsio-env
+    environment:
+      <<: [*lsio-env, *dotnet-env]
     volumes:
       - ${APPDATA}/radarr:/config
       - ${DATA}:/data
@@ -103,7 +113,8 @@ services:
     <<: *base
     image: lscr.io/linuxserver/sonarr:4.0.20
     container_name: sonarr
-    environment: *lsio-env
+    environment:
+      <<: [*lsio-env, *dotnet-env]
     volumes:
       - ${APPDATA}/sonarr:/config
       - ${DATA}:/data
@@ -126,11 +137,14 @@ services:
   # indexers this stack uses. Radarr/Sonarr built-in "HD-1080p" profiles are used instead.
 
   cleanuparr:   # removes stalled/failed downloads so the *arrs can grab another release
+    # Opt-in (configure it in its UI first, Dry Run on):
+    #   docker compose --profile extras up -d cleanuparr
     <<: *base
+    profiles: [extras]
     image: ghcr.io/cleanuparr/cleanuparr:2.11.2
     container_name: cleanuparr
     environment:
-      <<: *lsio-env
+      <<: [*lsio-env, *dotnet-env]
       PORT: 11011
     volumes:
       - ${APPDATA}/cleanuparr:/config
@@ -157,7 +171,7 @@ services:
     image: lscr.io/linuxserver/jellyfin:10.11.11
     container_name: jellyfin
     environment:
-      <<: *lsio-env
+      <<: [*lsio-env, *dotnet-env]
       JELLYFIN_PublishedServerUrl: ${JELLYFIN_PUBLIC_URL}
     devices:
       - /dev/dri:/dev/dri          # Intel Quick Sync hardware transcoding
@@ -178,13 +192,18 @@ services:
       PGID: ${PGID}
       TZ: ${TZ}
       LIBRARY_FOLDER: /data/media/music
+      # lean mode for a small host
+      AURRAL_WORKER_MAX_HEAP_MB: 384         # per background process (default 2048)
+      AURRAL_WORKER_IDLE_STOP_MS: 60000      # unload idle background workers after 1 min
+      AURRAL_SHARP_CONCURRENCY: 1            # image processing threads (default 2)
+      AURRAL_IMAGE_PROXY_MAX_BYTES: 134217728  # 128 MB artwork disk cache
     volumes:
       - ${APPDATA}/aurral:/config
       - ${DATA}:/data
     ports:
       - 3001:3001
 
-  lyrics:   # writes synced .lrc lyrics (LRCLIB) next to every track, every 30 min
+  lyrics:   # writes synced .lrc lyrics (LRCLIB) next to every track, every 6 hours
     <<: *base
     build: ./lyrics
     image: homelab/lyrics:beets-2.14.1-getlrc-0.1.16
@@ -192,7 +211,7 @@ services:
     user: "${PUID}:${PGID}"
     environment:
       TZ: ${TZ}
-      INTERVAL_SECONDS: 1800
+      INTERVAL_SECONDS: 21600
     volumes:
       - ${APPDATA}/lyrics:/config
       - ./config/lyrics/config.yaml:/config/config.yaml:ro
@@ -206,8 +225,10 @@ services:
     environment:
       ND_MUSICFOLDER: /music
       ND_DATAFOLDER: /data
-      ND_SCANNER_SCHEDULE: "@every 6h"
+      ND_SCANNER_SCHEDULE: "@every 24h"      # the file watcher picks up new music right away
       ND_SCANNER_WATCHERWAIT: 30s
+      ND_ENABLEARTWORKPRECACHE: "false"     # resize covers on demand, not in bulk after scans
+      ND_ENABLEINSIGHTSCOLLECTOR: "false"   # no anonymous usage telemetry
       ND_SCANNER_PURGEMISSING: full
       ND_SESSIONTIMEOUT: 24h
       ND_LOGLEVEL: info
