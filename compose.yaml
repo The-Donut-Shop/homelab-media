@@ -61,7 +61,7 @@ services:
       - ${DATA}:/data
     ports:
       - 5030:5030     # web UI / API
-      - 50300:50300   # Soulseek peer port
+      - 2234:2234     # Soulseek peer port (outside the ephemeral port range)
 
   # ──────────────────────────────── indexers ──────────────────────────────────
   prowlarr:
