@@ -19,7 +19,9 @@ mkdir -p "$DATA"/downloads/{torrents/{movies,series,music,books,audiobooks,incom
 - **slskd** (`:5030`): in `${APPDATA}/slskd/slskd.yml` set your Soulseek login,
   `directories.downloads: /data/downloads/soulseek/complete`,
   `directories.incomplete: /data/downloads/soulseek/incomplete`,
-  share `/data/media/music`, and an API key (`web.authentication.api_keys`) = `SLSKD_API_KEY`.
+  share `/data/media/music`, `soulseek.listen_port: 2234` (keep it out of the 32768-60999 ephemeral range),
+  and an API key (`web.authentication.api_keys`) = `SLSKD_API_KEY` with **role `administrator`**
+  (Aurral needs it to see slskd's download folder).
 
 ## 3. Indexers
 
