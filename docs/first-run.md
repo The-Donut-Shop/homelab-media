@@ -78,6 +78,12 @@ queue cleaner for stalled/failed downloads, never point the orphan scan at `/dat
 slskd `http://slskd:5030` + `SLSKD_API_KEY`, Prowlarr `http://prowlarr:9696`,
 qBittorrent `http://qbittorrent:8080` with category `music`. Keep yt-dlp last in the source order.
 
+YouTube lookups on a second machine (optional, for a host short on RAM): copy `remote/ytdlp/`
+there, put `RUNNER_TOKEN=<random string>` in a `.env` next to it and `docker compose up -d --build`.
+Here, set `YTDLP_REMOTE_URL=http://<that-machine>:8291` and `YTDLP_REMOTE_TOKEN` (the same string)
+in `.env`, then `docker compose up -d aurral`. Settings → Downloads → yt-dlp → *Test* should pass,
+and `docker logs ytdlp` on the other machine shows one line per lookup.
+
 **Navidrome** (`:4533`) reads `/data/media/music` read-only; the `lyrics` container adds
 `.lrc` files next to new tracks within ~2 minutes.
 

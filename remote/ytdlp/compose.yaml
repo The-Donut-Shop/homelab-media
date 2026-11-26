@@ -1,0 +1,41 @@
+# yt-dlp runner on a second LAN machine (one with spare RAM). Aurral on the media host
+# sends its YouTube lookups here (YTDLP_REMOTE_URL / YTDLP_REMOTE_TOKEN in the main .env)
+# and still downloads locally. Each lookup is a yt-dlp process of ~100 MB and a few
+# CPU-seconds, and one search starts up to seven of them; on the 8 GB media host every
+# search pushed ~90 MB of other apps into swap.
+# If this machine is off, Aurral simply does the lookups itself again.
+#
+# Setup: put RUNNER_TOKEN=<random string> in .env next to this file (the same value as
+# YTDLP_REMOTE_TOKEN on the media host), then `docker compose up -d --build`.
+name: ytdlp
+services:
+  ytdlp:
+    build: .
+    image: homelab/ytdlp-runner:2026.10.26
+    container_name: ytdlp
+    restart: unless-stopped
+    init: true
+    environment:
+      RUNNER_TOKEN: ${RUNNER_TOKEN:?put RUNNER_TOKEN in .env}
+      MAX_PARALLEL: 4
+    # Public resolvers only, like Byparr: the ISP resolver hijacks some sites.
+    dns: [1.1.1.1, 1.0.0.1]
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - cache:/cache
+    mem_limit: 1536m
+    ports:
+      - "8291:8291"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8291/health', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  cache:

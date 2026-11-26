@@ -91,10 +91,15 @@ The first-run checklist is in [docs/first-run.md](docs/first-run.md).
   what runs; updates are deliberate commits.
 - **No Lidarr.** Aurral handles artists, albums *and* single songs itself
   (Soulseek → torrents → yt-dlp fallback) and writes a clean `Artist/Album/NN - Title` library.
-- **Aurral is patched for a slow host.** It gives a YouTube Music search 15 s
-  (hard-coded); here one yt-dlp call takes 4–10 s, so songs that only YouTube has
-  always failed. [`aurral/Dockerfile`](aurral/Dockerfile) raises it to 60 s and
-  refuses to build if the upstream line changes.
+- **Aurral is patched for a slow host** ([`aurral/Dockerfile`](aurral/Dockerfile),
+  which refuses to build if the upstream code changes):
+  - It gives a YouTube Music search 15 s (hard-coded); here one yt-dlp call took
+    4–10 s, so songs that only YouTube has always failed. Raised to 60 s.
+  - Its YouTube lookups run on the second machine ([`remote/ytdlp/`](remote/ytdlp/)).
+    One search starts up to seven yt-dlp processes: ~200 MB and 15 CPU-seconds
+    here, which pushed other apps into swap. Now it costs this host ~20 MB and
+    ~1 CPU-second and takes ~7 s instead of ~20 s. Downloads still run here, and
+    if the second machine is off Aurral does the lookups itself.
 - **No Recyclarr / TRaSH profiles.** They score public-tracker groups (YTS/YIFY…)
   at −10000, which would block most releases on the public indexers used here.
   Radarr/Sonarr's built-in *HD-1080p* profiles are used instead.
@@ -117,6 +122,7 @@ Everything runs at its core job; optional extras that quietly eat RAM, CPU or di
 |---|---|---|
 | all .NET apps (Radarr, Sonarr, Prowlarr, Jellyfin, slskd, Cleanuparr) | server GC → `DOTNET_gcServer=0`, `DOTNET_GCConserveMemory=7` | remove the env vars |
 | Byparr, Cleanuparr | not started by default (compose profiles `cloudflare`, `extras`); Byparr runs on a second machine instead (`remote/byparr/`) | `docker compose --profile cloudflare --profile extras up -d` |
+| Aurral's YouTube lookups | run on a second machine (`remote/ytdlp/`); downloads stay here | empty `YTDLP_REMOTE_URL` |
 | Jellyfin | trickplay thumbnails, chapter images, loudness/segment scans, periodic metadata refresh; scan concurrency 2 | library settings + Scheduled Tasks |
 | Radarr / Sonarr | folder rescan only after manual refresh; RSS sync 60 min | Media Management / Indexers |
 | Navidrome | artwork pre-cache, insights telemetry; full scan daily (watcher catches changes) | env vars |

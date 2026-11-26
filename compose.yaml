@@ -189,14 +189,20 @@ services:
   # ─────────────────────────────────── music ──────────────────────────────────
   aurral:   # request a whole artist, an album or a single song
     <<: *base
-    build: ./aurral   # ghcr.io/lklynet/aurral:3.1.0 + 60 s for YouTube Music searches (see aurral/Dockerfile)
-    image: homelab/aurral:3.1.0-ytmusic60s
+    # ghcr.io/lklynet/aurral:3.1.0 + 60 s for YouTube Music searches + YouTube lookups
+    # on the second machine (see aurral/Dockerfile)
+    build: ./aurral
+    image: homelab/aurral:3.1.0-ytdlp-remote
     container_name: aurral
     environment:
       PUID: ${PUID}
       PGID: ${PGID}
       TZ: ${TZ}
       LIBRARY_FOLDER: /data/media/music
+      # YouTube lookups go to the yt-dlp runner (remote/ytdlp/); downloads stay here.
+      # Empty, or runner unreachable: everything runs here.
+      YTDLP_REMOTE_URL: ${YTDLP_REMOTE_URL:-}
+      YTDLP_REMOTE_TOKEN: ${YTDLP_REMOTE_TOKEN:-}
       # lean mode for a small host
       AURRAL_WORKER_MAX_HEAP_MB: 384         # per background process (default 2048)
       AURRAL_WORKER_IDLE_STOP_MS: 60000      # unload idle background workers after 1 min
