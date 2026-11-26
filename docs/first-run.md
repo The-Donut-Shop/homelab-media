@@ -79,7 +79,14 @@ slskd `http://slskd:5030` + `SLSKD_API_KEY`, Prowlarr `http://prowlarr:9696`,
 qBittorrent `http://qbittorrent:8080` with category `music`. Keep yt-dlp last in the source order.
 
 **Navidrome** (`:4533`) reads `/data/media/music` read-only; the `lyrics` container adds
-`.lrc` files next to new tracks every 30 minutes.
+`.lrc` files next to new tracks within ~2 minutes.
+
+If a well-known song fails with *No suitable search results*, check the album shown on the
+failed request. Aurral's song search sometimes picks a compilation copy, e.g. Zedd's
+*Clarity* came from a promo DJ mix as a 3:20 edit, so every normal 4:31 copy failed the length
+check. Request it from the artist's own album page instead. Versions that MusicBrainz doesn't
+list (withdrawn or leaked ones) can't be requested in Aurral; search for them in slskd
+(`:5030`) and move the file into `media/music/<Artist>/<Album>/` yourself.
 
 ## 6. Books
 

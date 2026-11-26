@@ -189,7 +189,8 @@ services:
   # ─────────────────────────────────── music ──────────────────────────────────
   aurral:   # request a whole artist, an album or a single song
     <<: *base
-    image: ghcr.io/lklynet/aurral:3.1.0
+    build: ./aurral   # ghcr.io/lklynet/aurral:3.1.0 + 60 s for YouTube Music searches (see aurral/Dockerfile)
+    image: homelab/aurral:3.1.0-ytmusic60s
     container_name: aurral
     environment:
       PUID: ${PUID}

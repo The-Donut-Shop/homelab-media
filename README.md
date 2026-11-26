@@ -91,6 +91,10 @@ The first-run checklist is in [docs/first-run.md](docs/first-run.md).
   what runs; updates are deliberate commits.
 - **No Lidarr.** Aurral handles artists, albums *and* single songs itself
   (Soulseek → torrents → yt-dlp fallback) and writes a clean `Artist/Album/NN - Title` library.
+- **Aurral is patched for a slow host.** It gives a YouTube Music search 15 s
+  (hard-coded); here one yt-dlp call takes 4–10 s, so songs that only YouTube has
+  always failed. [`aurral/Dockerfile`](aurral/Dockerfile) raises it to 60 s and
+  refuses to build if the upstream line changes.
 - **No Recyclarr / TRaSH profiles.** They score public-tracker groups (YTS/YIFY…)
   at −10000, which would block most releases on the public indexers used here.
   Radarr/Sonarr's built-in *HD-1080p* profiles are used instead.
